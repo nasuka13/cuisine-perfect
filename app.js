@@ -10,7 +10,7 @@ if (window.supabase && SUPABASE_URL !== 'VOTRE_SUPABASE_URL') {
 }
 
 // ==========================================
-// ÉTAT DE LA MÉMOIRE & SAUVEGARDE LOCALE
+// ÉTAT DE L'APPLICATION (Local / Mémoire)
 // ==========================================
 let state = {
     recipes: [
@@ -32,19 +32,20 @@ let state = {
     currentRecipeId: null
 };
 
-// Charge les données enregistrées sur l'appareil s'il y en a
+// ==========================================
+// SYSTÈME DE SAUVEGARDE LOCALE (LocalStorage)
+// ==========================================
 function loadFromStorage() {
     const savedState = localStorage.getItem('mesRecettesData');
     if (savedState) {
         try {
             state = JSON.parse(savedState);
         } catch (e) {
-            console.error("Erreur lors du chargement de la sauvegarde", e);
+            console.error("Erreur lors de la lecture de la sauvegarde", e);
         }
     }
 }
 
-// Sauvegarde l'état actuel sur l'appareil
 function saveToStorage() {
     localStorage.setItem('mesRecettesData', JSON.stringify(state));
 }
@@ -53,7 +54,7 @@ function saveToStorage() {
 // INITIALISATION AU CHARGEMENT
 // ==========================================
 document.addEventListener('DOMContentLoaded', () => {
-    loadFromStorage();
+    loadFromStorage(); // On charge les données sauvegardées sur l'appareil
     initDarkMode();
     renderAll();
     setupEventListeners();
@@ -65,7 +66,7 @@ function renderAll() {
     renderShopping();
     renderPlanning();
     updateStats();
-    saveToStorage(); // Sauvegarde automatique à chaque rafraîchissement des vues
+    saveToStorage(); // On sauvegarde automatiquement à chaque affichage/modification
 }
 
 // ==========================================
@@ -140,6 +141,7 @@ function renderRecipes(filter = '') {
     });
 }
 
+// Recherche dynamique
 document.getElementById('searchInput')?.addEventListener('input', (e) => {
     renderRecipes(e.target.value);
 });
