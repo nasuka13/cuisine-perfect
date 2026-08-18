@@ -10,7 +10,7 @@ if (window.supabase && SUPABASE_URL !== 'VOTRE_SUPABASE_URL') {
 }
 
 // ==========================================
-// ÉTAT DE L'APPLICATION (Local / Mémoire)
+// ÉTAT DE LA MÉMOIRE & SAUVEGARDE LOCALE
 // ==========================================
 let state = {
     recipes: [
@@ -32,10 +32,28 @@ let state = {
     currentRecipeId: null
 };
 
+// Charge les données enregistrées sur l'appareil s'il y en a
+function loadFromStorage() {
+    const savedState = localStorage.getItem('mesRecettesData');
+    if (savedState) {
+        try {
+            state = JSON.parse(savedState);
+        } catch (e) {
+            console.error("Erreur lors du chargement de la sauvegarde", e);
+        }
+    }
+}
+
+// Sauvegarde l'état actuel sur l'appareil
+function saveToStorage() {
+    localStorage.setItem('mesRecettesData', JSON.stringify(state));
+}
+
 // ==========================================
 // INITIALISATION AU CHARGEMENT
 // ==========================================
 document.addEventListener('DOMContentLoaded', () => {
+    loadFromStorage();
     initDarkMode();
     renderAll();
     setupEventListeners();
@@ -47,24 +65,22 @@ function renderAll() {
     renderShopping();
     renderPlanning();
     updateStats();
+    saveToStorage(); // Sauvegarde automatique à chaque rafraîchissement des vues
 }
 
 // ==========================================
-// GESTION DES ONGLES (NAVIGATION)
+// GESTION DES ONGLETS (NAVIGATION)
 // ==========================================
 function switchTab(tabName) {
-    // Masquer toutes les sections
     const sections = ['recettes', 'frigo', 'courses', 'planning', 'stats', 'outils'];
     sections.forEach(sec => {
         const el = document.getElementById(`section-${sec}`);
         if (el) el.classList.add('hidden');
     });
 
-    // Afficher la section active
     const activeSec = document.getElementById(`section-${tabName}`);
     if (activeSec) activeSec.classList.remove('hidden');
 
-    // Mettre à jour le style des boutons de la barre de navigation
     document.querySelectorAll('.nav-btn').forEach(btn => {
         if (btn.dataset.tab === tabName) {
             btn.classList.add('text-orange-500');
@@ -124,7 +140,6 @@ function renderRecipes(filter = '') {
     });
 }
 
-// Recherche dynamique
 document.getElementById('searchInput')?.addEventListener('input', (e) => {
     renderRecipes(e.target.value);
 });
@@ -172,7 +187,6 @@ function openRecipeDetail(id) {
     
     document.getElementById('viewSteps').innerText = recipe.steps;
 
-    // S'assurer d'afficher le mode vue et cacher le mode édition
     document.getElementById('recipeViewMode').classList.remove('hidden');
     document.getElementById('recipeEditForm').classList.add('hidden');
 
@@ -322,7 +336,7 @@ function toggleShopping(id) {
     const item = state.shopping.find(i => i.id === id);
     if (item) {
         item.checked = !item.checked;
-        renderShopping();
+        renderAll();
     }
 }
 
@@ -443,7 +457,6 @@ function toggleAuthMode() {
 document.getElementById('authForm')?.addEventListener('submit', (e) => {
     e.preventDefault();
     const email = document.getElementById('authEmail').value;
-    // Simulation de connexion réussie
     document.getElementById('authForm').classList.add('hidden');
     const loggedArea = document.getElementById('loggedInArea');
     loggedArea.classList.remove('hidden');
