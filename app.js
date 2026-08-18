@@ -1,63 +1,62 @@
 // ==========================================
-// CONFIGURATION SUPABASE (À configurer si besoin)
-// ==========================================
-const SUPABASE_URL = 'VOTRE_SUPABASE_URL';
-const SUPABASE_ANON_KEY = 'VOTRE_SUPABASE_ANON_KEY';
-let supabaseClient = null;
-
-if (window.supabase && SUPABASE_URL !== 'VOTRE_SUPABASE_URL') {
-    supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-}
-
-// ==========================================
-// ÉTAT DE L'APPLICATION (Local / Mémoire)
+// ÉTAT DE L'APPLICATION & CHARGEMENT SÛR
 // ==========================================
 let state = {
-    recipes: [
-        { id: 1, title: 'Pâtes Carbonara', category: 'Plat', difficulty: 'Facile', ingredients: ['Pâtes (400g)', 'Lardons (200g)', 'Œufs (3)', 'Parmesan'], steps: '1. Cuire les pâtes.\n2. Faire revenir les lardons.\n3. Mélanger les œufs et le parmesan, puis lier le tout hors du feu.' },
-        { id: 2, title: 'Salade César', category: 'Entrée', difficulty: 'Facile', ingredients: ['Salade romaine', 'Blancs de poulet', 'Croûtons', 'Sauce César'], steps: '1. Griller le poulet.\n2. Couper la salade.\n3. Assembler avec les croûtons et la sauce.' }
-    ],
-    fridge: [
-        { id: 1, name: 'Lait', qty: '1L', expiry: '2026-06-10' },
-        { id: 2, name: 'Œufs', qty: '6', expiry: '2026-06-15' }
-    ],
-    shopping: [
-        { id: 1, name: 'Tomates', qty: '1 kg', checked: false },
-        { id: 2, name: 'Pain de mie', qty: '1 paquet', checked: false }
-    ],
-    planning: [
-        { id: 1, day: 'Lundi', mealType: 'Midi', recipeName: 'Pâtes Carbonara' },
-        { id: 2, day: 'Lundi', mealType: 'Soir', recipeName: 'Salade César' }
-    ],
+    recipes: [],
+    fridge: [],
+    shopping: [],
+    planning: [],
     currentRecipeId: null
 };
 
-// ==========================================
-// SYSTÈME DE SAUVEGARDE LOCALE (LocalStorage)
-// ==========================================
+// Données par défaut si le localStorage est totalement vide
+const defaultData = {
+    recipes: [
+        { id: 1, title: 'Pâtes Carbonara', category: 'Plat', difficulty: 'Facile', ingredients: ['Pâtes (400g)', 'Lardons (200g)', 'Œufs (3)', 'Parmesan'], steps: '1. Cuire les pâtes.\n2. Faire revenir les lardons.\n3. Mélanger les œufs et le parmesan.' },
+        { id: 2, title: 'Salade César', category: 'Entrée', difficulty: 'Facile', ingredients: ['Salade romaine', 'Blancs de poulet', 'Croûtons', 'Sauce César'], steps: '1. Griller le poulet.\n2. Couper la salade.' }
+    ],
+    fridge: [
+        { id: 1, name: 'Lait', qty: '1L', expiry: '2026-06-10' }
+    ],
+    shopping: [
+        { id: 1, name: 'Tomates', qty: '1 kg', checked: false }
+    ],
+    planning: []
+};
+
+// Chargement robuste depuis le LocalStorage
 function loadFromStorage() {
-    const savedState = localStorage.getItem('mesRecettesData');
-    if (savedState) {
-        try {
+    try {
+        const savedState = localStorage.getItem('mesRecettesData');
+        if (savedState) {
             state = JSON.parse(savedState);
-        } catch (e) {
-            console.error("Erreur lors de la lecture de la sauvegarde", e);
+        } else {
+            // Si rien n'est enregistré, on met les données par défaut et on sauvegarde
+            state = defaultData;
+            saveToStorage();
         }
+    } catch (e) {
+        console.error("Erreur de lecture LocalStorage, utilisation par défaut", e);
+        state = defaultData;
     }
 }
 
+// Sauvegarde forcée
 function saveToStorage() {
-    localStorage.setItem('mesRecettesData', JSON.stringify(state));
+    try {
+        localStorage.setItem('mesRecettesData', JSON.stringify(state));
+    } catch (e) {
+        console.error("Erreur lors de la sauvegarde :", e);
+    }
 }
 
 // ==========================================
-// INITIALISATION AU CHARGEMENT
+// INITIALISATION
 // ==========================================
 document.addEventListener('DOMContentLoaded', () => {
-    loadFromStorage(); // On charge les données sauvegardées sur l'appareil
+    loadFromStorage();
     initDarkMode();
     renderAll();
-    setupEventListeners();
 });
 
 function renderAll() {
@@ -66,11 +65,10 @@ function renderAll() {
     renderShopping();
     renderPlanning();
     updateStats();
-    saveToStorage(); // On sauvegarde automatiquement à chaque affichage/modification
 }
 
 // ==========================================
-// GESTION DES ONGLETS (NAVIGATION)
+// GESTION DES ONGLETS
 // ==========================================
 function switchTab(tabName) {
     const sections = ['recettes', 'frigo', 'courses', 'planning', 'stats', 'outils'];
@@ -93,9 +91,6 @@ function switchTab(tabName) {
     });
 }
 
-// ==========================================
-// MODE SOMBRE (DARK MODE)
-// ==========================================
 function initDarkMode() {
     const toggleBtn = document.getElementById('darkModeToggle');
     if (toggleBtn) {
@@ -106,7 +101,7 @@ function initDarkMode() {
 }
 
 // ==========================================
-// GESTION DES RECETTES
+// RECETTES (AVEC SAUVEGARDE IMMÉDIATE)
 // ==========================================
 function renderRecipes(filter = '') {
     const grid = document.getElementById('recipesGrid');
@@ -141,19 +136,17 @@ function renderRecipes(filter = '') {
     });
 }
 
-// Recherche dynamique
 document.getElementById('searchInput')?.addEventListener('input', (e) => {
     renderRecipes(e.target.value);
 });
 
-function openModal() {
-    document.getElementById('recipeModal')?.classList.remove('hidden');
-}
-function closeModal() {
+function openModal() { document.getElementById('recipeModal')?.classList.remove('hidden'); }
+function closeModal() { 
     document.getElementById('recipeModal')?.classList.add('hidden');
     document.getElementById('recipeForm')?.reset();
 }
 
+// Ajout d'une recette + Sauvegarde explicite
 document.getElementById('recipeForm')?.addEventListener('submit', (e) => {
     e.preventDefault();
     const newRecipe = {
@@ -164,17 +157,19 @@ document.getElementById('recipeForm')?.addEventListener('submit', (e) => {
         ingredients: document.getElementById('recipeIngredients').value.split('\n').filter(i => i.trim() !== ''),
         steps: document.getElementById('recipeSteps').value
     };
+    
     state.recipes.push(newRecipe);
+    saveToStorage(); // Sauvegarde directe dans le navigateur
     closeModal();
     renderAll();
 });
 
 function deleteRecipe(id) {
     state.recipes = state.recipes.filter(r => r.id !== id);
+    saveToStorage();
     renderAll();
 }
 
-// Détails & Modification de recette
 function openRecipeDetail(id) {
     const recipe = state.recipes.find(r => r.id === id);
     if (!recipe) return;
@@ -191,7 +186,6 @@ function openRecipeDetail(id) {
 
     document.getElementById('recipeViewMode').classList.remove('hidden');
     document.getElementById('recipeEditForm').classList.add('hidden');
-
     document.getElementById('recipeDetailModal')?.classList.remove('hidden');
 }
 
@@ -233,6 +227,7 @@ document.getElementById('recipeEditForm')?.addEventListener('submit', (e) => {
             ingredients: document.getElementById('editRecipeIngredients').value.split('\n').filter(i => i.trim() !== ''),
             steps: document.getElementById('editRecipeSteps').value
         };
+        saveToStorage();
     }
     closeRecipeDetailModal();
     renderAll();
@@ -280,12 +275,14 @@ document.getElementById('fridgeForm')?.addEventListener('submit', (e) => {
         qty: document.getElementById('fridgeItemQty').value,
         expiry: document.getElementById('fridgeItemExpiry').value
     });
+    saveToStorage();
     closeFridgeModal();
     renderAll();
 });
 
 function deleteFridge(id) {
     state.fridge = state.fridge.filter(i => i.id !== id);
+    saveToStorage();
     renderAll();
 }
 
@@ -330,6 +327,7 @@ document.getElementById('shoppingForm')?.addEventListener('submit', (e) => {
         qty: document.getElementById('shoppingItemQty').value,
         checked: false
     });
+    saveToStorage();
     closeShoppingModal();
     renderAll();
 });
@@ -338,12 +336,14 @@ function toggleShopping(id) {
     const item = state.shopping.find(i => i.id === id);
     if (item) {
         item.checked = !item.checked;
+        saveToStorage();
         renderAll();
     }
 }
 
 function deleteShopping(id) {
     state.shopping = state.shopping.filter(i => i.id !== id);
+    saveToStorage();
     renderAll();
 }
 
@@ -388,12 +388,14 @@ document.getElementById('planningForm')?.addEventListener('submit', (e) => {
         mealType: document.getElementById('planningMealType').value,
         recipeName: document.getElementById('planningRecipeName').value
     });
+    saveToStorage();
     closePlanningModal();
     renderAll();
 });
 
 function deletePlanning(id) {
     state.planning = state.planning.filter(p => p.id !== id);
+    saveToStorage();
     renderAll();
 }
 
@@ -401,10 +403,15 @@ function deletePlanning(id) {
 // STATISTIQUES
 // ==========================================
 function updateStats() {
-    document.getElementById('statTotalRecipes').innerText = state.recipes.length;
-    document.getElementById('statTotalFridge').innerText = state.fridge.length;
-    document.getElementById('statTotalShopping').innerText = state.shopping.filter(s => !s.checked).length;
-    document.getElementById('statTotalPlanning').innerText = state.planning.length;
+    const el1 = document.getElementById('statTotalRecipes');
+    const el2 = document.getElementById('statTotalFridge');
+    const el3 = document.getElementById('statTotalShopping');
+    const el4 = document.getElementById('statTotalPlanning');
+
+    if (el1) el1.innerText = state.recipes.length;
+    if (el2) el2.innerText = state.fridge.length;
+    if (el3) el3.innerText = state.shopping.filter(s => !s.checked).length;
+    if (el4) el4.innerText = state.planning.length;
 }
 
 // ==========================================
@@ -443,7 +450,7 @@ function updateTimerDisplay(seconds) {
 }
 
 // ==========================================
-// AUTHENTIFICATION (Simulée / Modale)
+// AUTHENTIFICATION
 // ==========================================
 function openAuthModal() { document.getElementById('authModal')?.classList.remove('hidden'); }
 function closeAuthModal() { document.getElementById('authModal')?.classList.add('hidden'); }
@@ -461,16 +468,13 @@ document.getElementById('authForm')?.addEventListener('submit', (e) => {
     const email = document.getElementById('authEmail').value;
     document.getElementById('authForm').classList.add('hidden');
     const loggedArea = document.getElementById('loggedInArea');
-    loggedArea.classList.remove('hidden');
-    document.getElementById('currentEmail').innerText = email;
+    if(loggedArea) loggedArea.classList.remove('hidden');
+    const emailSpan = document.getElementById('currentEmail');
+    if(emailSpan) emailSpan.innerText = email;
 });
 
 function handleLogout() {
-    document.getElementById('authForm').reset();
-    document.getElementById('authForm').classList.remove('hidden');
-    document.getElementById('loggedInArea').classList.add('hidden');
-}
-
-function setupEventListeners() {
-    // Écouteurs globaux supplémentaires si nécessaire
+    document.getElementById('authForm')?.reset();
+    document.getElementById('authForm')?.classList.remove('hidden');
+    document.getElementById('loggedInArea')?.classList.add('hidden');
 }
